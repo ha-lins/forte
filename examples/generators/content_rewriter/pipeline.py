@@ -14,8 +14,8 @@
 """
 The main running pipeline for the rewriter.
 """
-from examples.generators.content_rewriter.reader import TableReader
-from examples.generators.content_rewriter.rewriter import ContentRewriter
+from reader import TableReader
+from rewriter import ContentRewriter
 from forte.data.data_pack import DataPack
 from forte.pipeline import Pipeline
 from forte.processors.writers import PackNameJsonPackWriter
@@ -29,7 +29,9 @@ def main():
         PackNameJsonPackWriter(),
         {'indent': 2,
          'output_dir': '.'})
-    pipeline.run('| this | is | a | table', 'This is the sample sentence.')
+    # each triplet of the input table consists of three fields: value|type|associated entity
+    pipeline.run('The_Mill|name|The_Mill pub|eatType|The_Mill French|food|The_Mill £20-25|priceRange|The_Mill riverside|area|The_Mill The_Sorrento|near|The_Mill',\
+    'In the city_centre lies Aromi , a French coffee_shop for adults with a low customer rating.')
 
 
 if __name__ == '__main__':
