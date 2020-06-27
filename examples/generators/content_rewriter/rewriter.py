@@ -52,7 +52,7 @@ class ContentRewriter(PackProcessor):
             f_ref.write(utterance.text)
 
         # Step 2: Restore the generation model and test
-        os.system('./run.sh')
+        os.system('./evaluation.sh')
 
         # step 3: process the output file
         output_dir = '/data3/linshuai/manip_old/examples/text_content_manipulation/e2ev14_output'
