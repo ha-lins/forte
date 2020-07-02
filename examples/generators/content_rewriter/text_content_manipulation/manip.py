@@ -19,34 +19,37 @@ import texar as tx
 
 import pickle
 # os.system('cd text_content_manipulation')
-from text_content_manipulation.copy_net import CopyNetWrapper
+from examples.generators.content_rewriter.text_content_manipulation.copy_net import CopyNetWrapper
 from texar.core import get_train_op
-from text_content_manipulation.utils_e2e_clean import *
-from text_content_manipulation.get_xx import get_match
-from text_content_manipulation.get_xy import get_align
+from examples.generators.content_rewriter.text_content_manipulation.utils_e2e_clean import *
+from examples.generators.content_rewriter.text_content_manipulation.get_xx import get_match
+from examples.generators.content_rewriter.text_content_manipulation.get_xy import get_align
 # from ie import get_precrec
 
 flags = tf.flags
-flags.DEFINE_string("config_data", "text_content_manipulation.config_data_e2e_clean", "The data config.")
-flags.DEFINE_string("config_model", "text_content_manipulation.config_model_clean", "The model config.")
-flags.DEFINE_string("config_train", "text_content_manipulation.config_train", "The training config.")
+flags.DEFINE_string("config_data", "examples.generators.content_rewriter.text_content_manipulation.config_data_e2e_clean", "The data config.")
+flags.DEFINE_string("config_model", "examples.generators.content_rewriter.text_content_manipulation.config_model_clean", "The model config.")
+flags.DEFINE_string("config_train", "examples.generators.content_rewriter.text_content_manipulation.config_train", "The training config.")
 flags.DEFINE_float("rec_w", 0.8, "Weight of reconstruction loss.")
 flags.DEFINE_float("rec_w_rate", 0., "Increasing rate of rec_w.")
 flags.DEFINE_boolean("add_bleu_weight", False, "Whether to multiply BLEU weight"
                                                " onto the first loss.")
-flags.DEFINE_string("expr_name", "text_content_manipulation/e2e_model/demo/ckpt-best/model.ckpt-921", "The experiment name. "
-                                                            "Used as the directory name of run.")
-flags.DEFINE_string("restore_from", "text_content_manipulation/e2e_model/demo/ckpt-best/model.ckpt-921", "The specific checkpoint path to "
+flags.DEFINE_string("expr_name", "text_content_manipulation/e2e_model/demo", "The experiment name. "
+                                                   "Used as the directory name of run.")
+# flags.DEFINE_string("expr_name", "e2e_model/demo", "The experiment name. "
+#                                                    "Used as the directory name of run.")
+
+flags.DEFINE_string("restore_from", "", "The specific checkpoint path to "
                                         "restore from. If not specified, the latest checkpoint in "
                                         "expr_name is used.")
-flags.DEFINE_boolean("copy_x", False, "Whether to copy from x.")
+flags.DEFINE_boolean("copy_x", True, "Whether to copy from x.")
 flags.DEFINE_boolean("copy_y_", False, "Whether to copy from y'.")
-flags.DEFINE_boolean("coverage", False, "Whether to add coverage onto the copynets.")
-flags.DEFINE_float("exact_cover_w", 0., "Weight of exact coverage loss.")
+flags.DEFINE_boolean("coverage", True, "Whether to add coverage onto the copynets.")
+flags.DEFINE_float("exact_cover_w", 2.5, "Weight of exact coverage loss.")
 flags.DEFINE_float("eps", 1e-10, "epsilon used to avoid log(0).")
 flags.DEFINE_integer("disabled_vocab_size", 0, "Disabled vocab size.")
-flags.DEFINE_boolean("attn_x", False, "Whether to attend x.")
-flags.DEFINE_boolean("attn_y_", False, "Whether to attend y'.")
+flags.DEFINE_boolean("attn_x", True, "Whether to attend x.")
+flags.DEFINE_boolean("attn_y_", True, "Whether to attend y'.")
 flags.DEFINE_boolean("sd_path", False, "Whether to add structured data path.")
 flags.DEFINE_float("sd_path_multiplicator", 1., "Structured data path multiplicator.")
 flags.DEFINE_float("sd_path_addend", 0., "Structured data path addend.")
@@ -503,14 +506,8 @@ def build_model(data_batch, data, step):
     decoder, tf_outputs, loss = teacher_forcing(rnn_cell, 1, 0, 'MLE')
     rec_decoder, _, rec_loss = teacher_forcing(rnn_cell, 1, 1, 'REC')
     rec_weight = FLAGS.rec_w
-    # rec_weight = tf.py_func(
-    #     lambda_anneal, [step_stage],
-    #     tf.float32, stateful=False, name='lambda_w')
-    # rec_weight = tf.cond(step_stage < 1 ,)
-    #rec_weight = rec_weight[0]
-    #tf.Print('===========rec_w is {}'.format(rec_weight[0]))
 
-    step_stage = tf.cast(step, tf.float32) / tf.constant(600.0)
+    step_stage = tf.cast(step, tf.float32) / tf.constant(800.0)
     rec_weight = tf.case([(tf.less_equal(step_stage, tf.constant(1.0)), lambda:tf.constant(1.0)), \
                           (tf.greater(step_stage, tf.constant(2.0)), lambda:FLAGS.rec_w)], \
                          default=lambda:tf.constant(1.0) - (step_stage - 1) * (1 - FLAGS.rec_w))
@@ -540,7 +537,7 @@ class Rewriter():
         self.sess = tf.Session()
         # data batch
         self.datasets = {mode: tx.data.MultiAlignedData(hparams)
-                    for mode, hparams in config_data.datas.items()}
+                         for mode, hparams in config_data.datas.items()}
         self.data_iterator = tx.data.FeedableDataIterator(self.datasets)
         self.data_batch = self.data_iterator.get_next()
 
@@ -566,7 +563,7 @@ class Rewriter():
     def save_to(self, directory, step):
         print('saving to {} ...'.format(directory))
 
-        saved_path = saver.save(self.sess, directory, global_step=step)
+        saved_path = self.saver.save(self.sess, directory, global_step=step)
 
         print('saved to {}'.format(saved_path))
 
@@ -586,53 +583,54 @@ class Rewriter():
     def restore_from(self, directory):
         if os.path.exists(directory):
             ckpt_path = tf.train.latest_checkpoint(directory)
-            _restore_from_path(ckpt_path)
+            self.restore_from_path(ckpt_path)
 
         else:
             print('cannot find checkpoint directory {}'.format(directory))
 
 
-    # def train_epoch(self, sess, summary_writer, mode, train_op, summary_op):
-    #     print('in _train_epoch')
-    #
-    #     self.data_iterator.restart_dataset(sess, mode)
-    #
-    #     feed_dict = {
-    #         tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
-    #         data_iterator.handle: data_iterator.get_handle(sess, mode),
-    #     }
-    #
-    #     while True:
-    #         try:
-    #             loss, summary = sess.run((self.train_op, self.summary_op), feed_dict)
-    #
-    #             step = tf.train.global_step(sess, global_step)
-    #
-    #             print('step {:d}: loss = {:.6f}'.format(step, loss))
-    #
-    #             summary_writer.add_summary(summary, step)
-    #
-    #             # if step % config_train.steps_per_eval == 0:
-    #             #     _eval_epoch(sess, summary_writer, 'val')
-    #
-    #         except tf.errors.OutOfRangeError:
-    #             break
-    #
-    #     print('end _train_epoch')
+    def train_epoch(self, sess, summary_writer, mode, train_op, summary_op):
+        print('in _train_epoch')
+
+        self.data_iterator.restart_dataset(sess, mode)
+
+        feed_dict = {
+            tx.global_mode(): tf.estimator.ModeKeys.TRAIN,
+            self.data_iterator.handle: self.data_iterator.get_handle(sess, mode),
+        }
+
+        while True:
+            try:
+                loss, summary = sess.run((train_op, summary_op), feed_dict)
+
+                step = tf.train.global_step(sess, self.global_step)
+
+                print('step {:d}: loss = {:.6f}'.format(step, loss))
+
+                summary_writer.add_summary(summary, step)
+
+                # if step % config_train.steps_per_eval == 0:
+                #     _eval_epoch(sess, summary_writer, 'val')
+
+            except tf.errors.OutOfRangeError:
+                break
+
+        print('end _train_epoch')
 
 
-    def eval_epoch(self, sess, summary_writer, mode):
+    def eval_epoch(self, mode):
         global best_ever_val_bleu
 
         print('in _eval_epoch with mode {}'.format(mode))
 
-        self.data_iterator.restart_dataset(sess, mode)
+        self.data_iterator.restart_dataset(self.sess, mode)
+
         feed_dict = {
+            self.data_iterator.handle: self.data_iterator.get_handle(self.sess, mode),
             tx.global_mode(): tf.estimator.ModeKeys.EVAL,
-            self.data_iterator.handle: self.data_iterator.get_handle(sess, mode)
         }
 
-        step = tf.train.global_step(sess, self.global_step)
+        step = tf.train.global_step(self.sess, self.global_step)
 
         ref_hypo_pairs = []
         fetches = [
@@ -651,7 +649,7 @@ class Rewriter():
         cnt = 0
         while True:
             try:
-                target_texts, entry_texts, output_ids = sess.run(fetches, feed_dict)
+                target_texts, entry_texts, output_ids = self.sess.run(fetches, feed_dict)
                 target_texts = [
                     tx.utils.strip_special_tokens(
                         texts[:, 1:].tolist(), is_token_list=True)
@@ -714,8 +712,8 @@ class Rewriter():
             for name, value in {'precision': prec, 'recall': rec}.items():
                 summary.value.add(tag='{}/{}'.format(mode, name),
                                   simple_value=value)
-        summary_writer.add_summary(summary, step)
-        summary_writer.flush()
+        self.summary_writer.add_summary(summary, step)
+        self.summary_writer.flush()
 
         bleu = bleus[0]
         if mode == 'val':
@@ -732,8 +730,8 @@ class Rewriter():
         self.sess.run(tf.global_variables_initializer())
         self.sess.run(tf.local_variables_initializer())
         self.sess.run(tf.tables_initializer())
+        # self.sess.run(self.data_iterator)
 
-        #print('=========rec_w is {}'.format(rec_weight.eval()))
         if restore_from:
             self.restore_from_path(restore_from)
         else:
@@ -743,29 +741,29 @@ class Rewriter():
         self.summary_writer = tf.summary.FileWriter(
             dir_summary, self.sess.graph, flush_secs=30)
 
-        # epoch = 0
-        # while epoch < config_train.max_epochs:
-        #     name = 'align' if FLAGS.align else 'joint'
-        #     train_op = train_ops[name]
-        #     summary_op = summary_ops[name]
-        #
-        #     val_bleu = self.eval_epoch(sess, summary_writer, 'val')
-        #     test_bleu = self.eval_epoch(sess, summary_writer, 'test')
-        #
-        #     step = tf.train.global_step(sess, global_step)
-        #
-        #     print('epoch: {} ({}), step: {}, '
-        #           'val BLEU: {:.2f}, test BLEU: {:.2f}'.format(
-        #         epoch, name, step, val_bleu, test_bleu))
-        #
-        #     self.train_epoch(sess, summary_writer, 'train', train_op, summary_op)
-        #
-        #     epoch += 1
-        #
-        #     step = tf.train.global_step(sess, global_step)
-        #     self.save_to(ckpt_model, step)
-        #
-        # self.eval_epoch(self.sess, summary_writer, 'test')
+        epoch = 0
+        while epoch < config_train.max_epochs:
+            name = 'align' if FLAGS.align else 'joint'
+            train_op = self.train_ops[name]
+            summary_op = self.summary_ops[name]
+
+            # val_bleu = self.eval_epoch(self.sess, self.summary_writer, 'val')
+            # test_bleu = self.eval_epoch(self.sess, self.summary_writer, 'test')
+
+            step = tf.train.global_step(self.sess, self.global_step)
+
+            # print('epoch: {} ({}), step: {}, '
+            #       'val BLEU: {:.2f}, test BLEU: {:.2f}'.format(
+            #     epoch, name, step, val_bleu, test_bleu))
+
+            self.train_epoch(self.sess, self.summary_writer, 'train', train_op, summary_op)
+
+            epoch += 1
+
+            step = tf.train.global_step(self.sess, self.global_step)
+            self.save_to(ckpt_model, step)
+
+        # self.eval_epoch(self.sess, self.summary_writer, 'test')
         # print('epoch: {}, test BLEU: {}'.format(epoch, test_bleu))
 
 
@@ -777,4 +775,7 @@ if __name__ == '__main__':
     # for i in range(FLAGS.times):
     #     content_rewritter_instance.eval_epoch()
     # main()
-    Rewriter()
+    model = Rewriter()
+    model.load_model()
+    # model.eval_epoch(model.sess, model.summary_writer, 'test')
+
