@@ -20,20 +20,19 @@ from forte.data.data_pack import DataPack
 from forte.processors.base import PackProcessor
 from ft.onto.base_ontology import Utterance, UtteranceContext
 import os
-# from text_content_manipulation.manip import Rewriter
-
-class Model:
-    """This is a dummy model that always return the same string."""
-
-    def __init__(self):
-        self.model_str = "this content is from the model."
-
-    def response(self):
-        # Pretend the model is running for 5 seconds.
-        print('model is computing...')
-        import time
-        time.sleep(5)
-        return self.model_str
+import sys
+# class Model:
+#     """This is a dummy model that always return the same string."""
+#
+#     def __init__(self):
+#         self.model_str = "this content is from the model."
+#
+#     def response(self):
+#         # Pretend the model is running for 5 seconds.
+#         print('model is computing...')
+#         import time
+#         time.sleep(5)
+#         return self.model_str
 
 
 class ContentRewriter(PackProcessor):
@@ -41,11 +40,13 @@ class ContentRewriter(PackProcessor):
         # pylint: disable=attribute-defined-outside-init
 
         # Make sure the initialize model here.
-        # os.system('./texar.sh')
-        # os.system('conda list')
+        # Note: here we first need to set the path for reading data later.
+        # print('[info]{}'.format(os.getcwd()))
 
-        from text_content_manipulation.manip import Rewriter
+        os.chdir('../../forte-rewriter/examples/generators/content_rewriter')
 
+        from examples.generators.content_rewriter.text_content_manipulation.manip import Rewriter
+        #initialize model
         self.model = Rewriter()
         self.model.load_model()
 
@@ -76,4 +77,5 @@ class ContentRewriter(PackProcessor):
         print('The utterance is:')
         print(utterance.text)
 
-        self.new_utternace(input_pack, self.model.eval_epoch(self.model.sess, self.model.summary_writer, 'test'), 'ai')
+        # self.new_utternace(input_pack, self.model.eval_epoch(self.model.sess, self.model.summary_writer, 'test'), 'ai')
+        self.new_utternace(input_pack, self.model.eval_epoch('test'), 'ai')
