@@ -531,16 +531,6 @@ def candidate_rels_extractor(all_ents, players, teams, cities, prons, connect_mu
     return extract
 
 
-def default_candidate_rels_extractor(path):
-    dataset = get_json_dataset(path, "train")
-    all_ents, players, teams, cities = get_ents(dataset)
-    if connect_multiwords:
-        all_ents, players, teams, cities = (
-            set(map(lambda s: s.replace(' ', '_'), ents))
-            for ents in (all_ents, players, teams, cities))
-    return candidate_rels_extractor(all_ents, players, teams, cities, prons, connect_multiwords=False)
-
-
 def get_datasets(path, connect_multiwords=False, filter_none=False):
     datasets = {stage: get_json_dataset(path, stage) for stage in stages}
     all_ents, players, teams, cities = get_ents(datasets["train"])
