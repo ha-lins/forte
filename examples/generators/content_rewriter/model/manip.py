@@ -13,7 +13,6 @@ import os
 import numpy as np
 import tensorflow as tf
 from texar.core import get_train_op
-
 from examples.generators.content_rewriter.model.copy_net import CopyNetWrapper
 from examples.generators.content_rewriter.model.utils_e2e_clean import *
 
