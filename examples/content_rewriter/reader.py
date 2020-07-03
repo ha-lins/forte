@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""
+The reader to read a table and example utterance.
+"""
 from typing import Iterator, Tuple
 
 from forte.data.data_pack import DataPack
@@ -35,6 +37,6 @@ class TableReader(PackReader):
 
         # Create the sample sentence.
         u = Utterance(p, len(table) + 1, len(p.text))
-        u.speaker = 'ai'
+        u.speaker = 'user'
 
         yield p

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Textontent Manipulation
 3-gated copy net.
@@ -8,31 +7,51 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import importlib
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.seq2seq import tile_batch
+from tensorflow.contrib.seq2seq.python.ops.beam_search_decoder import tile_batch
 from texar.core import get_train_op
-from examples.generators.content_rewriter.model.copy_net import CopyNetWrapper
-from examples.generators.content_rewriter.model.utils_e2e_clean import *
 
-# pylint: disable=invalid-name, no-member, too-many-locals
+from examples.content_rewriter.model.copy_net import CopyNetWrapper
+from examples.content_rewriter.model.utils_e2e_clean import (
+    tx,
+    x_strs,
+    x_fields,
+    y_strs,
+    get_scope_name_of_train_op,
+    get_scope_name_of_summary_op,
+    corpus_bleu
+)
+
+# pylint: disable=invalid-name, no-member, too-many-locals, global-statement
+# pylint: disable=undefined-loop-variable, unused-variable, chained-comparison
+# pylint: disable=unexpected-keyword-arg, no-value-for-parameter,
+# pylint: disable=protected-access, unused-argument, global-variable-undefined
+# pylint: disable=attribute-defined-outside-init
 
 flags = tf.flags
-flags.DEFINE_string("config_data",
-                    "examples.generators.content_rewriter.model.config_data_e2e_clean",
-                    "The data config.")
-flags.DEFINE_string("config_model",
-                    "examples.generators.content_rewriter.model.config_model_clean",
-                    "The model config.")
-flags.DEFINE_string("config_train",
-                    "examples.generators.content_rewriter.model.config_train",
-                    "The training config.")
+
+flags.DEFINE_string(
+    "config_data",
+    "examples.content_rewriter.model.config_data_e2e_clean",
+    "The data config.")
+flags.DEFINE_string(
+    "config_model",
+    "examples.content_rewriter.model.config_model_clean",
+    "The model config.")
+flags.DEFINE_string(
+    "config_train",
+    "examples.content_rewriter.model.config_train",
+    "The training config.")
 flags.DEFINE_float("rec_w", 0.8, "Weight of reconstruction loss.")
 flags.DEFINE_float("rec_w_rate", 0., "Increasing rate of rec_w.")
-flags.DEFINE_boolean("add_bleu_weight", False, "Whether to multiply BLEU weight"
-                                               " onto the first loss.")
+flags.DEFINE_boolean("add_bleu_weight",
+                     False,
+                     "Whether to multiply BLEU weight"
+                     " onto the first loss.")
 flags.DEFINE_string("expr_name", "model/e2e_model/demo",
                     "The experiment name. "
                     "Used as the directory name of run.")
@@ -56,6 +75,7 @@ flags.DEFINE_float("sd_path_addend", 0., "Structured data path addend.")
 flags.DEFINE_boolean("verbose", False, "verbose.")
 flags.DEFINE_boolean("eval_ie", False, "Whether evaluate IE.")
 flags.DEFINE_integer("eval_ie_gpuid", 0, "ID of GPU on which IE runs.")
+flags.DEFINE_boolean("nothreading", False, "Django work around.")
 FLAGS = flags.FLAGS
 
 copy_flag = FLAGS.copy_x or FLAGS.copy_y_
@@ -73,6 +93,27 @@ dir_model = os.path.join(expr_name, 'ckpt')
 dir_best = os.path.join(expr_name, 'ckpt-best')
 ckpt_model = os.path.join(dir_model, 'model.ckpt')
 ckpt_best = os.path.join(dir_best, 'model.ckpt')
+
+
+def set_model_dir(para_expr_name):
+    global expr_name
+
+    global dir_summary
+    global dir_model
+    global dir_best
+    global ckpt_model
+    global ckpt_best
+
+    expr_name = para_expr_name
+
+    dir_summary = os.path.join(expr_name, 'log')
+    dir_model = os.path.join(expr_name, 'ckpt')
+    dir_best = os.path.join(expr_name, 'ckpt-best')
+    ckpt_model = os.path.join(dir_model, 'model.ckpt')
+    ckpt_best = os.path.join(dir_best, 'model.ckpt')
+
+
+set_model_dir(FLAGS.expr_name)
 
 
 def get_optimistic_restore_variables(ckpt_path, graph=tf.get_default_graph()):
@@ -282,19 +323,24 @@ def build_model(data_batch, data, step):
 
                 return get_copy_scores
 
+            covrity_dim = config_model.coverage_state_dim \
+                if FLAGS.coverage else None
+            coverity_rnn_cell_hparams = config_model.coverage_rnn_cell \
+                if FLAGS.coverage else None
             cell = CopyNetWrapper(
                 cell=cell, vocab_size=vocab.size,
                 memory_ids_states_lengths=[
                     tuple(kwargs['{}_{}'.format(prefix, s)]
                           for s in ('ids', 'states', 'lengths'))
                     for prefix in memory_prefixes],
-                input_ids= \
-                    kwargs['input_ids'] if tgt_ref_flag is not None else None,
+                input_ids=kwargs[
+                    'input_ids'] if tgt_ref_flag is not None else None,
                 get_get_copy_scores=get_get_copy_scores,
-                coverity_dim=config_model.coverage_state_dim if FLAGS.coverage else None,
-                coverity_rnn_cell_hparams=config_model.coverage_rnn_cell if FLAGS.coverage else None,
+                coverity_dim=covrity_dim,
+                coverity_rnn_cell_hparams=coverity_rnn_cell_hparams,
                 disabled_vocab_size=FLAGS.disabled_vocab_size,
-                eps=FLAGS.eps)
+                eps=FLAGS.eps
+            )
 
         decoder = tx.modules.BasicRNNDecoder(
             cell=cell, hparams=config_model.decoder,
@@ -363,7 +409,6 @@ def build_model(data_batch, data, step):
                                         'exact coverage loss {:d}:'.format(i),
                                         exact_coverage_loss)
                     with tf.control_dependencies([print_op]):
-                        # exact_cover_w = FLAGS.exact_cover_w + FLAGS.exact_cover_w * tf.cast(step, tf.float32)
                         loss += FLAGS.exact_cover_w * exact_coverage_loss
 
         losses[loss_name] = loss
@@ -385,7 +430,6 @@ def build_model(data_batch, data, step):
 
         return decoder, bs_outputs
 
-
     decoder, tf_outputs, loss = teacher_forcing(rnn_cell, 1, 0, 'MLE')
     rec_decoder, _, rec_loss = teacher_forcing(rnn_cell, 1, 1, 'REC')
     rec_weight = FLAGS.rec_w
@@ -403,7 +447,6 @@ def build_model(data_batch, data, step):
     tiled_decoder, bs_outputs = beam_searching(
         rnn_cell, 1, 0, config_train.infer_beam_width)
 
-
     train_ops = {
         name: get_train_op(losses[name], hparams=config_train.train[name])
         for name in config_train.train}
@@ -413,7 +456,6 @@ def build_model(data_batch, data, step):
 
 class Rewriter():
     def __init__(self):
-
         self.sess = tf.Session()
         # data batch
         self.datasets = {mode: tx.data.MultiAlignedData(hparams)
@@ -616,7 +658,6 @@ class Rewriter():
             train_op = self.train_ops[name]
             summary_op = self.summary_ops[name]
 
-
             step = tf.train.global_step(self.sess, self.global_step)
 
             self.train_epoch(self.sess, self.summary_writer, 'train', train_op,
@@ -629,7 +670,6 @@ class Rewriter():
 
 
 if __name__ == '__main__':
-
     model = Rewriter()
     model.load_model()
     # model.eval_epoch(model.sess, model.summary_writer, 'test')
