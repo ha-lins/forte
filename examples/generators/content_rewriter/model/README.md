@@ -1,47 +1,39 @@
-# Text Content Manipulation
+## A Content Re-writer Example
 
-## Prerequisites
+This example implements a content rewriter. Given a table and a sentence, this
+will rewrite the sentence based on the table.
 
-Before running the commands, you've to ensure Python3 is installed.
+Run `pipeline.py` to execute the rewriter. The other files are:
+ - `reader.py`: reads the data.
+ - `reweriter.py`: conducts the actual rewriting.
+
+### Prerequisites
+
+The code has been tested on:
+`Python==3.6.0, tensorflow-gpu==1.12.0, texar==0.2.1, texar-pytorch==0.1.1`
 
 Run the following commands:
 
 ```bash
-make
+cd model
 pip3 install -r requirements.txt
 ```
 
-You also need to install [Texar](https://github.com/asyml/texar), a newly released NLP toolkits:
+You also need to install texar-tf from the [link](https://github.com/asyml/texar/archive/v0.2.1.zip). Please ensure that texar and texar-pytorch are both installed from source using this command (without -e):
 
 ```bash
-git clone https://github.com/asyml/texar.git
-cd texar && pip3 install -e .
+cd texar && pip3 install .
 ```
 
-### For IE
 
-If you'd like to evaluate IE after training, you have to ensure Lua Torch is installed, and download the IE models from [here](https://drive.google.com/file/d/1hV8I9tvoL3943OqqPkLFIbTYfFSqsV1e/view?usp=sharing) then unzip the files directly under the directory `data2text/`.
+### Downloading the models and data
 
-## Run
+Before we run the rewriting demo, we need to download models and data from the [link](https://drive.google.com/drive/folders/1jNaJ_R_f89G8xbAC8iwe49Yx_Z-LXr0i?usp=sharing) and put the two directories(i.e., e2e_data, e2e_model) under the current `model/` directory.  
 
-The following command illustrates how to run an experiment:
+### Running the example
+
+Now to see the example in action, just run
 
 ```bash
-python3 manip.py --attn_x --attn_y_ --copy_x --rec_w 0.8 --expr_name ${EXPR_NAME}
+python pipline.py
 ```
-
-Where `${EXPR_NAME}` is the directory you'd like to store all the files related to your experiment, e.g. `my_expr`.
-
-Note that the code will automatically restore from the previously saved latest checkpoint if it exists.
-
-You can start Tensorboard in your working directory and watch the curves and $\textrm{BLEU}(\hat{y}, y')$.
-
-## evaluate IE scores
-
-After trained your model, you may want to evaluate IE (Information Retrieval) scores. The following command illustrates how to do it:
-
-```bash
-python3 ie.py --gold_file nba_data/gold.${STAGE}.txt --ref_file nba_data/nba.sent_ref.${STAGE}.txt ${EXPR_NAME}/ckpt/hypo*.test.txt --gpuid 0
-```
-
-which uses GPU 0 to run IE models for all `${EXPR_NAME}/ckpt/hypo*.test.txt`. `${STAGE}` can be val or test depending on which stage you want to evaluate. The result will be appended to `${EXPR_NAME}/ckpt/ie_results.${STAGE}.txt`, in which the columns represents training steps, $\textrm{BLEU}(\hat{y}, y')$, IE precision, IE recall, simple precision and simple recall (you don't have to know what simple precision/recall is), respectively.

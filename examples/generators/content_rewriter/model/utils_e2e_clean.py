@@ -11,8 +11,7 @@ import os
 import random
 import texar as tx
 import sys
-from tensorflow.contrib.seq2seq import tile_batch
-from examples.generators.content_rewriter.model.data2text.data_utils import get_train_ents, extract_entities
+from examples.generators.content_rewriter.model.data2text.data_utils import extract_entities
 
 
 # load all entities
