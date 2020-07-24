@@ -50,8 +50,7 @@ class CliNERPredict():
         # Load model
         #if use_lstm==False:
         with open('CliNER/models/silver.crf', 'rb') as f:
-            # Model = \
-            print(pickle.load(f))#, encoding='latin1'))
+            Model = pickle.load(f), encoding='latin1')
 
         if Model._use_lstm:
             import helper_dataset as hd
