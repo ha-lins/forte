@@ -8,7 +8,7 @@ This example implements a Clinical NER. Given a clinical document, this example 
 cd CliNER && pip install requirements.txt
 ```
 
-###Example Data
+### Example Data
 
 
 Although we cannot provide i2b2 data, there is a sample to demonstrate how the data is formatted (not actual data from i2b2, though).
