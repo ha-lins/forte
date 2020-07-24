@@ -615,8 +615,6 @@ class Pipeline(Generic[PackType]):
                     self._proc_mgr.current_processor_index = next_queue_index
                     self._proc_mgr.current_queue_index = next_queue_index
 
-        self._proc_mgr.reset()
-
     def evaluate(self) -> Iterator[Tuple[str, Any]]:
         for i in self.evaluator_indices:
             p = self.components[i]
