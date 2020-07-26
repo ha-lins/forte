@@ -13,8 +13,8 @@ import tempfile
 import pycrfsuite
 
 
-from tools import compute_performance_stats
-from feature_extraction.read_config import enabled_modules
+from examples.Cliner.CliNER.code.tools import compute_performance_stats
+from examples.Cliner.CliNER.code.feature_extraction.read_config import enabled_modules
 
 cliner_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 tmp_dir = os.path.join(cliner_dir, 'data', 'tmp')

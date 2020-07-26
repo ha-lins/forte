@@ -28,7 +28,6 @@ __all__ = [
     "Utterance",
     "PredicateArgument",
     "EntityMention",
-    "ClinicalEntityMention",
     "EventMention",
     "PredicateMention",
     "PredicateLink",
@@ -183,19 +182,6 @@ class EntityMention(Annotation):
         super().__init__(pack, begin, end)
         self.ner_type: Optional[str] = None
 
-@dataclass
-class ClinicalEntityMention(Annotation):
-    """
-    A span based annotation `ClinicalEntityMention`, normally used to represent an Entity Mention in a piece of clinical text.
-    Attributes:
-        cliner_type (Optional[str])
-    """
-
-    cliner_type: Optional[str]
-
-    def __init__(self, pack: DataPack, begin: int, end: int):
-        super().__init__(pack, begin, end)
-        self.cliner_type: Optional[str] = None
 
 @dataclass
 class EventMention(Annotation):

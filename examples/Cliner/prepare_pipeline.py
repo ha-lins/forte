@@ -25,4 +25,4 @@ pipeline = Pipeline[DataPack]()
 pipeline.set_reader(ClinerReader())
 pipeline.add(PackNameJsonPackWriter(),
              {'indent': 2, 'output_dir': '.', 'overwrite': True})
-pipeline.run('CliNER-master/data/examples/ex_doc.txt','CliNER-master/data/examples/ex_doc.con')
+pipeline.run('CliNER/data/examples/ex_doc.txt','CliNER/data/examples/ex_doc.con')

@@ -513,7 +513,7 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
         # CRF
         ########
 
-        from feature_extraction.features import extract_features
+        from examples.Cliner.CliNER.code.feature_extraction.features import extract_features
 
         # vectorize tokenized sentences
         text_features = extract_features(train_sents)
@@ -579,7 +579,7 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
                                          test_X_ids=test_X, test_Y_ids=test_Y)
     else:
         # train using crf
-        from machine_learning   import crf
+        from examples.Cliner.CliNER.code.machine_learning   import crf
         clf, dev_score  = crf.train(X_feats, Y_labels, val_X=val_X, val_Y=val_Y,
                                    test_X=test_X, test_Y=test_Y)
 
@@ -687,7 +687,7 @@ def generic_predict(p_or_n, tokenized_sents, vocab, clf, use_lstm, hyperparams):
             #        id_seq.append(vocab['oov'])
           #  X.append(id_seq)
     else:
-        from feature_extraction.features import extract_features
+        from examples.Cliner.CliNER.code.feature_extraction.features import extract_features
 
         # vectorize validation X
         text_features = extract_features(tokenized_sents)
@@ -703,7 +703,7 @@ def generic_predict(p_or_n, tokenized_sents, vocab, clf, use_lstm, hyperparams):
          
        
     else:
-        from machine_learning   import crf
+        from examples.Cliner.CliNER.code.machine_learning   import crf
         predictions =   crf.predict(clf, X)
 
     # Format labels from output

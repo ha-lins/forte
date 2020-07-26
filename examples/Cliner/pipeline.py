@@ -17,6 +17,7 @@ The main running pipeline for the rewriter.
 import sys
 
 from examples.Cliner.Cliner import ClinicalNER
+from examples.Cliner.Cliner_train import CliTrain
 from forte.data.data_pack import DataPack
 from forte.data.readers import RawDataDeserializeReader
 from forte.pipeline import Pipeline
@@ -31,19 +32,23 @@ def do_process(input_pack_str: str):
     # You can get the JSON form like this.
     data_json = datapack.serialize()
     # Let's write it out.
-    with open('generation.txt', 'w') as fo:
+    with open('generation.json', 'w') as fo:
         fo.write(data_json)
 
 
 if __name__ == '__main__':
-    pipeline.set_reader(RawDataDeserializeReader())
-    pipeline.add(ClinicalNER(), config={
-        'model_dir': sys.argv[1]
-    })
+    if sys.argv[2] == 'train':       # train mode
+        model = CliTrain(sys.argv[1])
+        model.train()
+    else:                            # inference mode
+        pipeline.set_reader(RawDataDeserializeReader())
+        pipeline.add(ClinicalNER(), config={
+            'model_dir': sys.argv[1]
+        })
 
-    # You should initialize the model here, so we only do it once.
-    pipeline.initialize()
+        # You should initialize the model here, so we only do it once.
+        pipeline.initialize()
 
-    with open('Cliner_input.json') as fi:
-        test_str = fi.read()
-        do_process(test_str)
+        with open('Cliner_input.json') as fi:
+            test_str = fi.read()
+            do_process(test_str)

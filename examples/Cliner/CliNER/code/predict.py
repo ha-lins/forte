@@ -14,11 +14,11 @@ import itertools
 import pickle
 
 from examples.Cliner.CliNER.code import tools
-# from examples.Cliner.CliNER.code.model import ClinerModel, write
+from examples.Cliner.CliNER.code.model import ClinerModel, write
 from examples.Cliner.CliNER.code.notes.documents import Document
 import copy
 import sys,os
-
+import examples.Cliner.CliNER.code.model
 
 class CliNERPredict():
     def __init__(self, txt, output, model_path, format):
@@ -49,9 +49,8 @@ class CliNERPredict():
 
         # Load model
         #if use_lstm==False:
-        with open('CliNER/models/silver.crf', 'rb') as f:
-            # Model = \
-            print(pickle.load(f))#, encoding='latin1'))
+        with open(self.model_path, 'rb') as f:
+            Model = pickle.load(f, encoding='latin1')
 
         if Model._use_lstm:
             import helper_dataset as hd
@@ -103,7 +102,7 @@ class CliNERPredict():
             # Output the concept predictions
             sys.stdout.write('\n\nwriting to: %s\n' % out_path)
             with open(out_path, 'w') as f:
-                write(f, '%s\n' % output)
+                f.write('%s\n' % output)
             sys.stdout.write('\n')
 
 

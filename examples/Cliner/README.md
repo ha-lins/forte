@@ -1,6 +1,6 @@
 ## A Clinical NER Example
 
-This example implements a Clinical NER. Given a clinical document, this example will annotate NER labels based on the document.
+This example implements a Clinical NER model. Given a clinical document, this example will annotate NER labels based on the document. This model is borrowed from [CliNER](https://github.com/text-machine-lab/CliNER).
 
 ### Prerequisites
 
@@ -11,7 +11,7 @@ cd CliNER && pip install requirements.txt
 ###Example Data
 
 
-Although we cannot provide i2b2 data, there is a sample to demonstrate how the data is formatted (not actual data from i2b2, though).
+Although we cannot provide the data due to the license problem, there is a sample to demonstrate how the data is formatted (not actual data from i2b2, though).
 
     CliNER/data/examples/ex_doc.txt
 
@@ -24,10 +24,16 @@ This is a concept file. It provides annotations for the concepts (problems, trea
 Please note that the example data is simply one of many examples that can found online.
 
 
-### Running with the example data and a simple model
+### Running with the example data
 
-Now to see the example in action, just run
+First, we need to prepare data as follows:
 
 ```bash
-python pipline.py CliNER
+python prepare_pipline.py
+```
+
+Then to see the example in action, just run:
+
+```bash
+python pipline.py CliNER predict
 ```
